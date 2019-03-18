@@ -31,27 +31,13 @@ public class InlineText : Text, IPointerClickHandler
     private readonly List<HrefInfo> _ListHrefInfos = new List<HrefInfo>();
     #endregion
 
-    ///// <summary>
-    ///// 初始化 
-    ///// </summary>
-    //protected override void OnEnable()
-    //{
-    //    //
-    //    base.OnEnable();
-    //    //支持富文本
-    //    supportRichText = true;
-    //    //对齐几何
-    //    alignByGeometry = true;
-    //    if (!_InlineManager)
-    //        _InlineManager = GetComponentInParent<InlineManager>();
-    //    //启动的是 更新顶点
-    //    SetVerticesDirty();
-    //}
+    
 
     protected override void Start()
     {
         ActiveText();
 
+        //添加超链接的委托事件
         OnHrefClick.RemoveListener(HandHrefEvent);
 
         OnHrefClick.AddListener(HandHrefEvent);
