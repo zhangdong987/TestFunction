@@ -102,4 +102,6 @@ public class AssetInfo
         Bundled = "";
         childAssetInfo = new List<AssetInfo>();
     }
+    
+
 }

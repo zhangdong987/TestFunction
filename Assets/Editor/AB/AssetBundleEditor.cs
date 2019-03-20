@@ -14,12 +14,18 @@ public class AssetBundleEditor :EditorWindow
     }
     private AssetInfo _asset;
 
-    private AssetBundleInfo _assetBundle;//AB包配置对象
+    public static AssetBundleInfo _assetBundle;//AB包配置对象
     private bool _isRename = false;//是否正在进行重命名操作
     private string _renameValue = "";
     private int _currentABAsset = -1;//当前选中的AB资源
+                                     //所有的有效资源列表
+    public static List<AssetInfo> _validAssets;//???????
     private void Init()
     {
+        if (_validAssets == null)
+            _validAssets = new List<AssetInfo>();
+        _validAssets.Clear();
+        _assetBundle = new AssetBundleInfo();
         _asset = new AssetInfo(Application.dataPath,"Assets",true);
         AssetBundleTool.ReadAssetsInChildren(_asset);
 
@@ -30,8 +36,9 @@ public class AssetBundleEditor :EditorWindow
     {
         TitleGUI();//标题栏
         AssetBundlesGUI();
-        CurrentAssetBundlesGUI();
         AssetsGUI();
+        CurrentAssetBundlesGUI();
+       
     }
     #region 标题栏区域
     //标记 ，用于标记当前选中的AB包索引
@@ -47,6 +54,8 @@ public class AssetBundleEditor :EditorWindow
     private string _buildPath = "";
     //打包平台
     private BuildTarget _buildTarget = BuildTarget.StandaloneWindows;
+
+
     private void TitleGUI()
     {
         if (GUI.Button(new Rect(5,5,60,15),"Create",_preButton))
@@ -59,35 +68,61 @@ public class AssetBundleEditor :EditorWindow
         //重命名当前选中的AB包（必须选中任意一个AB包后方可生效）； 
         if (GUI.Button(new Rect(65,5,60,15),"Rename",_preButton))
         {
-
+            _isRename = true;
+            _renameValue="";
         }
         //清空当前选中的AB包中的所有资源（必须选中任意一个AB包后方可生效）； 
         if (GUI.Button(new Rect(125,5,60,15),"Clear",_preButton))
         {
-
+            if (EditorUtility.DisplayDialog("Prompt","Clear"+_assetBundle.AssetBundles[_currentAB].Name+" ?","Yes","No"))
+            {
+                _assetBundle.AssetBundles[_currentAB].CleareAsset();
+            }
         }
         //删除当前的AB包，同时会自动执行Clear操作（必须选中任意一个AB包后方可生效）； 
         if (GUI.Button(new Rect(185,5,60,15),"Delete",_preButton))
         {
-
+            if (EditorUtility.DisplayDialog("Prompt","Delete"+_assetBundle.AssetBundles[_currentAB].Name+" ?","Yes","No"))
+            {
+                _assetBundle.DeleteAssetBundle(_currentAB);
+                _currentAB = -1;
+            }
         }
         //被勾选的资源添加到当前选中的AB包（必须选中任意一个AB包后方可生效）； 
         if (GUI.Button(new Rect(250,5,100,15),"Add Assets",_preButton))
         {
-
+            List<AssetInfo> assets = _validAssets.GetCheckedAssets();
+            for (int i = 0; i < assets.Count; i++)
+            {
+                _assetBundle.AssetBundles[_currentAB].AddAsset(assets[i]);
+            }
         }
         GUI.enabled = true;
 
-        _hideInvalidAsset = GUI.Toggle(new Rect(360, 5, 100, 15), _hideInvalidAsset, "Hide Invalid");
+       // _hideInvalidAsset =;
         _hideBundleAsset = GUI.Toggle(new Rect(460, 5, 100, 15), _hideBundleAsset, "Hide Bundled");
+        if (GUI.Toggle(new Rect(360, 5, 100, 15), _hideInvalidAsset, "Hide Invalid")!=_hideInvalidAsset)
+        {
+            _hideInvalidAsset = !_hideInvalidAsset;
+
+        }
 
         if (GUI.Button(new Rect(250,25,60,15),"Open",_preButton))
         {
-
+            if (_buildPath!="")
+            {
+                Application.OpenURL(_buildPath);
+            }
+         
         }
         if (GUI.Button(new Rect(310,25,60,15),"Browse",_preButton))
         {
-
+            _buildPath=EditorUtility.OpenFolderPanel("BuildPath",string.Empty,string.Empty);
+            EditorPrefs.SetString("BuildPath", _buildPath);
+        }
+        if (_buildPath=="")
+        {
+            _buildPath = EditorPrefs.GetString("BuildPath", "");
         }
         GUI.Label(new Rect(370,25,70,15),"Build Path:");
         _buildPath = GUI.TextField(new Rect(440,25,300,15),_buildPath);
@@ -96,7 +131,7 @@ public class AssetBundleEditor :EditorWindow
 
         if (GUI.Button(new Rect((int)position.width-55,5,50,15),"Build",_preButton))
         {
-
+            AssetBundleTool.BuildAssetBundles();
         }
     }
 
@@ -133,7 +168,7 @@ public class AssetBundleEditor :EditorWindow
         for (int i=0;i<_assetBundle.AssetBundles.Count;++i)
         {
             //判断AB包是否为空包
-            string icon = _assetBundle.AssetBundles[i].Assets.Count > 0 ? "PrefabNormal Icon" : "Prefab Icon";
+            string icon = "Prefab Icon";//_assetBundle.AssetBundles[i].Assets.Count > 0 ? "PrefabNormal Icon" : "Prefab Icon";
             //遍历到当前选中的AB包对象
             if (_currentAB == i)
             {
@@ -151,7 +186,7 @@ public class AssetBundleEditor :EditorWindow
                     {
                         if (_renameValue != "")
                         {
-                            if (!_assetBundle.IsExistName(_renameValue))
+                            if (_assetBundle.IsExistName(_renameValue)==null)
                             {
                                 _assetBundle.AssetBundles[_currentAB].RenameAssetBundle(_renameValue);
                                 _renameValue = "";
@@ -174,7 +209,7 @@ public class AssetBundleEditor :EditorWindow
                 //未进行重命名操作  在原地绘制不可编辑的Label控件
                 else
                 {
-                    GUIContent content = EditorGUIUtility.IconContent(icon);
+                     GUIContent content = EditorGUIUtility.IconContent(icon);
                     content.text = _assetBundle.AssetBundles[i].Name;
                     GUI.Label(new Rect(5, _ABViewHeight, 230, 15), content);
                 }
@@ -214,6 +249,8 @@ public class AssetBundleEditor :EditorWindow
     //区域高度标记，是后续用来控制视图滚动量的
     private int _currentABViewHeight = 0;
 
+    private GUIStyle _OLMinus = new GUIStyle("OL Minus");
+
     private void CurrentAssetBundlesGUI()
     {
         //  //区域的视图范围：左上角位置固定在上一个区域的底部，宽度固定（240），高度为窗口高度的一半再减去空隙（15），上下都有空隙
@@ -222,6 +259,46 @@ public class AssetBundleEditor :EditorWindow
 
         _currentABScroll = GUI.BeginScrollView(_currentABViewRect,_currentABScroll,_currentABScollRect);
         GUI.BeginGroup(_currentABScollRect,box);
+
+
+        _currentABViewHeight = 5;
+        if (_currentAB != -1)
+        {
+            AssetBundleBuildInfo build = _assetBundle.AssetBundles[_currentAB];
+            for (int i=0;i<build.Assets.Count;++i)
+            {
+                //同理，遍历到当前选中的资源对象，在原地画蓝色高亮背景框
+                if (_currentABAsset == i)
+                {
+                    GUI.Box(new Rect(10, _currentABViewHeight, 200, 15), "", _LRSelect);
+                    GUIContent content = EditorGUIUtility.ObjectContent(null, build.Assets[i].AssetType);
+                    content.text = build.Assets[i].AssetName;
+                    GUI.Label(new Rect(20, _currentABViewHeight, 205, 15),content);
+                    //绘制减号按钮
+                    if (GUI.Button(new Rect(180, _currentABViewHeight, 20, 15), "", _OLMinus))
+                    {
+                        build.RemoveAsset(build.Assets[i]);
+                        _currentABAsset = -1;
+                    }
+                }
+                else
+                {
+                    //原地绘制Button控件，当点击时，此资源对象被选中
+                    GUIContent content = EditorGUIUtility.ObjectContent(null, build.Assets[i].AssetType);
+                    content.text = build.Assets[i].AssetName;
+                    if (GUI.Button(new Rect(5, _currentABViewHeight, 205, 15), content))
+                    {
+                        _currentABAsset = i;
+                    }
+                }
+              
+               
+                _currentABViewHeight += 20;
+
+            }
+        }
+
+        _currentABViewHeight += 5;
         if (_currentABViewHeight<_currentABViewRect.height)
         {
             _currentABViewHeight = (int)_currentABViewRect.height;
@@ -254,6 +331,34 @@ public class AssetBundleEditor :EditorWindow
         GUI.EndGroup();
         GUI.EndScrollView();
     }
+
+    private void SetAssetIsChecked(AssetInfo asset)
+    {
+        if (asset == null || asset.childAssetInfo == null || asset.childAssetInfo.Count <= 0)
+            return;
+        for (int i = 0; i < asset.childAssetInfo.Count; ++i)
+        {
+            AssetInfo assetchild = asset.childAssetInfo[i];
+           
+            if (assetchild.AssetFileType == FileType.Folder)
+            {
+                assetchild.IsChecked = asset.IsChecked;
+                SetAssetIsChecked(assetchild);
+            }
+            else
+            {
+                if (assetchild.Bundled != "")
+                {
+                    assetchild.IsChecked = true;
+                }
+                else
+                {
+                    assetchild.IsChecked = asset.IsChecked;
+                }
+            }
+        }
+    }
+
     /// <summary>
     /// 展示一个资源对象的GUI  indentation为缩进等级 子对象总比父对象大
     /// </summary>
@@ -261,15 +366,26 @@ public class AssetBundleEditor :EditorWindow
     /// <param name="indentation"></param>
     private void AssetGUI(AssetInfo asset,int indentation)
     {
+        if (_hideInvalidAsset&& asset.AssetFileType==FileType.InValidFile)
+        {
+            return;
+        }
+        if (_hideBundleAsset && asset.Bundled!="")
+        {
+            return;
+        }
         //开启一行
         GUILayout.BeginHorizontal();
         //以空格缩进
         GUILayout.Space(indentation*20+5);
         if (asset.AssetFileType == FileType.Folder)
         {
+            //asset.IsChecked = GUILayout.Toggle(asset.IsChecked, "", GUILayout.Width(20));
             if (GUILayout.Toggle(asset.IsChecked, "", GUILayout.Width(20)) != asset.IsChecked)
             {
+                asset.IsChecked = !asset.IsChecked;
 
+                SetAssetIsChecked(asset);
             }
             //获取系统中的文件夹图标
             GUIContent content = EditorGUIUtility.IconContent("Folder Icon");
@@ -282,10 +398,20 @@ public class AssetBundleEditor :EditorWindow
         {
             GUI.enabled = !(asset.AssetFileType == FileType.InValidFile || asset.Bundled != "");
             //画一个勾选框
-            if (GUILayout.Toggle(asset.IsChecked,"",GUILayout.Width(20))!=asset.IsChecked)
+            if (asset.Bundled != "")
             {
-
+                GUI.enabled = false;
             }
+            asset.IsChecked = GUILayout.Toggle(asset.IsChecked, "", GUILayout.Width(20));
+            if (asset.Bundled != "")
+            {
+                GUI.enabled = true;
+            }
+            /* if (GUILayout.Toggle(asset.IsChecked,"",GUILayout.Width(20))!=asset.IsChecked)
+             {
+                 Debug.Log("isChecked==="+asset.IsChecked);
+             }*/
+
             //缩进单位10的长度，为了抵消文件夹前面的上下文菜单按钮
             GUILayout.Space(10);
             //根据对象的类型获取他的图标样式
@@ -314,4 +440,6 @@ public class AssetBundleEditor :EditorWindow
     }
 
     #endregion
+
+
 }

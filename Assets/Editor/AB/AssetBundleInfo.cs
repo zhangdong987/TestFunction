@@ -16,15 +16,15 @@ public class AssetBundleInfo
     }
 
     //是否存在该ab包名
-    public bool IsExistName(string name)
+    public AssetBundleBuildInfo IsExistName(string name)
     {
         foreach (AssetBundleBuildInfo one in AssetBundles)
         {
             if (one.Name==name)
             {
-                return true;
+                return one;
             }
         }
-        return false;
+        return null;
     }
 }
